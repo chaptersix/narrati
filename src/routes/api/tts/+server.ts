@@ -1,4 +1,6 @@
-import { OPENAI_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+
+const OPENAI_API_KEY = env.OPENAI_API_KEY;
 
 export async function POST({ request }: { request: Request }) {
 	const { text, voice = 'alloy', model = 'tts-1' } = await request.json();
