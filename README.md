@@ -17,7 +17,7 @@ We provide a pre-built Docker image for a consistent runtime environment. This i
 
 1. **Pull & Run the Container**:
    ```bash
-   docker run -p 3000:3000 --env-file .env ghcr.io/yourusername/narrati:latest
+   docker run -p 3000:3000 --env-file .env ghcr.io/chaptersix/narrati:latest
    ```
 
    Include your OpenAI API key in the `.env` file:
