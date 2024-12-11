@@ -1,0 +1,65 @@
+name: Docker Image CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ghcr.io/chaptersix/narrati
+          tags: |
+            type=ref,event=pr,tag=pr-${{ github.event.pull_request.number }}
+            type=ref,event=branch,branch=main
+            type=ref,event=tag
+          # This action will automatically determine tags based on event type.
+          # For PRs: pr-<PR_NUMBER>
+          # For main: main
+          # For releases: <tag> from the release
+          # We'll handle 'latest' after we know it's a release.
+
+      - name: Build and Push Image
+        if: github.event_name == 'pull_request' || github.event_name == 'push' || github.event_name == 'release'
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+
+      - name: Tag as Latest (On Release)
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+        run: |
+          # Assuming every published release should be considered stable and get the 'latest' tag
+          # Retag the previously built image as latest and push
+          image="ghcr.io/OWNER/chaptersix/narrati"
+          # The release tag is something like 'v1.0.0' from steps.meta.outputs.tags
+          # The docker/build-push-action already pushed that tag. Now we just tag and push latest.
+          docker pull "$image:${{ github.event.release.tag_name }}"
+          docker tag "$image:${{ github.event.release.tag_name }}" "$image:latest"
+          docker push "$image:latest"
